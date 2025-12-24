@@ -182,290 +182,292 @@ public class Main extends JavaPlugin implements Listener {
         return it;
     }
 
-    /* ================ EVENTS ================ */
+  /* ================ EVENTS ================ */
 
-    @EventHandler
-    public void onInventoryClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player p)) return;
-        if (e.getCurrentItem() == null) return;
+@EventHandler
+public void onInventoryClick(InventoryClickEvent e) {
+    if (!(e.getWhoClicked() instanceof Player p)) return;
+    if (e.getCurrentItem() == null) return;
 
-        String title = e.getView().getTitle();
-        e.setCancelled(true);
+    String title = e.getView().getTitle();
+    e.setCancelled(true);
 
-        if (title.equals("§8Rangi")) {
+    if (title.equals("§8Rangi")) {
 
-            switch (e.getCurrentItem().getType()) {
+        switch (e.getCurrentItem().getType()) {
 
-                case EMERALD -> {
-                    p.closeInventory();
+            case EMERALD -> {
+                p.closeInventory();
 
-                    ConversationFactory factory = new ConversationFactory(this)
-                            .withFirstPrompt(new StringPrompt() {
-                                @Override
-                                public String getPromptText(ConversationContext context) {
-                                    return "§aWpisz nazwę nowej rangi:";
-                                }
+                ConversationFactory factory = new ConversationFactory(this)
+                        .withFirstPrompt(new StringPrompt() {
+                            @Override
+                            public String getPromptText(ConversationContext context) {
+                                return "§aWpisz nazwę nowej rangi:";
+                            }
 
-                                @Override
-                                public Prompt acceptInput(ConversationContext context, String input) {
-                                    String rank = input.toLowerCase();
+                            @Override
+                            public Prompt acceptInput(ConversationContext context, String input) {
+                                String rank = input.toLowerCase();
 
-                                    if (ranks.isConfigurationSection(rank)) {
-                                        p.sendMessage("§cTaka ranga już istnieje!");
-                                        return END_OF_CONVERSATION;
-                                    }
-
-                                    ensureRank(rank, "gray");
-                                    saveRanks();
-
-                                    editing.put(p.getUniqueId(), rank);
-                                    openColorGUI(p);
+                                if (ranks.isConfigurationSection(rank)) {
+                                    p.sendMessage("§cTaka ranga już istnieje!");
                                     return END_OF_CONVERSATION;
                                 }
-                            })
-                            .withLocalEcho(false);
 
-                    factory.buildConversation(p).begin();
-                }
+                                ensureRank(rank, "gray");
+                                saveRanks();
 
-                case BOOK -> {
-                    p.closeInventory();
-                    p.sendMessage("§eKliknij rangę:");
-                    for (String r : ranks.getKeys(false)) {
-                        p.sendMessage(
-                                Component.text("[" + r.toUpperCase() + "]")
-                                        .color(colorOf(r))
-                                        .clickEvent(ClickEvent.runCommand("/ranga edit " + r))
-                        );
-                    }
-                }
+                                editing.put(p.getUniqueId(), rank);
+                                openColorGUI(p);
+                                return END_OF_CONVERSATION;
+                            }
+                        })
+                        .withLocalEcho(false);
 
-                case BARRIER -> {
-                    p.closeInventory();
-                    p.sendMessage("§cKliknij rangę do usunięcia:");
-                    for (String r : ranks.getKeys(false)) {
-                        p.sendMessage(
-                                Component.text("[" + r.toUpperCase() + "]")
-                                        .color(colorOf(r))
-                                        .clickEvent(ClickEvent.runCommand("/ranga delete " + r))
-                        );
-                    }
+                factory.buildConversation(p).begin();
+            }
+
+            case BOOK -> {
+                p.closeInventory();
+                p.sendMessage("§eKliknij rangę:");
+                for (String r : ranks.getKeys(false)) {
+
+                    String display = ranks.getString(r + ".display", r);
+
+                    p.sendMessage(
+                            Component.text("[" + display.toUpperCase() + "]")
+                                    .color(colorOf(r))
+                                    .clickEvent(ClickEvent.runCommand("/ranga edit " + r))
+                    );
                 }
             }
 
-        } else if (title.equals("§8Kolor rangi")) {
+            case BARRIER -> {
+                p.closeInventory();
+                p.sendMessage("§cKliknij rangę do usunięcia:");
+                for (String r : ranks.getKeys(false)) {
 
-            String rank = editing.get(p.getUniqueId());
-            if (rank == null) return;
+                    String display = ranks.getString(r + ".display", r);
 
-            String color = e.getCurrentItem().getType().name()
-                    .replace("_DYE", "")
-                    .toLowerCase();
-
-            ranks.set(rank + ".color", color);
-            saveRanks();
-
-            p.sendMessage("§aUstawiono kolor rangi.");
-            p.closeInventory();
-
-        } else if (title.startsWith("§8Edytuj ")) {
-
-            String rank = editing.get(p.getUniqueId());
-            if (rank == null) return;
-
-            switch (e.getCurrentItem().getType()) {
-
-                case PAINTING -> openColorGUI(p);
-
-                case NAME_TAG -> {
-                    p.closeInventory();
-
-                    ConversationFactory factory = new ConversationFactory(this)
-                            .withFirstPrompt(new StringPrompt() {
-                                @Override
-                                public String getPromptText(ConversationContext context) {
-                                    return "§aWpisz nową nazwę rangi:";
-                                }
-
-                                @Override
-                                public Prompt acceptInput(ConversationContext context, String input) {
-                                    String newRank = input.toLowerCase();
-
-                                    if (ranks.isConfigurationSection(newRank)) {
-                                        p.sendMessage("§cTaka ranga już istnieje!");
-                                        return END_OF_CONVERSATION;
-                                    }
-
-                                    String col = ranks.getString(rank + ".color", "gray");
-
-                                    ranks.set(rank, null);
-                                    ranks.set(newRank + ".color", col);
-
-                                    for (String k : players.getKeys(false)) {
-                                        if (players.getString(k).equals(rank)) {
-                                            players.set(k, newRank);
-                                        }
-                                    }
-
-                                    saveRanks();
-                                    savePlayers();
-
-                                    p.sendMessage("§aZmieniono nazwę rangi.");
-                                    return END_OF_CONVERSATION;
-                                }
-                            })
-                            .withLocalEcho(false);
-
-                    factory.buildConversation(p).begin();
-                }
-
-                case BARRIER -> {
-                    p.closeInventory();
                     p.sendMessage(
-                            Component.text("[TAK]").color(NamedTextColor.GREEN)
-                                    .clickEvent(ClickEvent.runCommand("/ranga confirmdelete " + rank))
-                    );
-                    p.sendMessage(
-                            Component.text("[NIE]").color(NamedTextColor.RED)
-                                    .clickEvent(ClickEvent.runCommand("/ranga canceldelete"))
+                            Component.text("[" + display.toUpperCase() + "]")
+                                    .color(colorOf(r))
+                                    .clickEvent(ClickEvent.runCommand("/ranga delete " + r))
                     );
                 }
             }
         }
+
+    } else if (title.equals("§8Kolor rangi")) {
+
+        String rank = editing.get(p.getUniqueId());
+        if (rank == null) return;
+
+        String color = e.getCurrentItem().getType().name()
+                .replace("_DYE", "")
+                .toLowerCase();
+
+        ranks.set(rank + ".color", color);
+        saveRanks();
+
+        p.sendMessage("§aUstawiono kolor rangi.");
+        p.closeInventory();
+
+    } else if (title.startsWith("§8Edytuj ")) {
+
+        String rank = editing.get(p.getUniqueId());
+        if (rank == null) return;
+
+        switch (e.getCurrentItem().getType()) {
+
+            case PAINTING -> openColorGUI(p);
+
+            case NAME_TAG -> {
+                p.closeInventory();
+
+                ConversationFactory factory = new ConversationFactory(this)
+                        .withFirstPrompt(new StringPrompt() {
+                            @Override
+                            public String getPromptText(ConversationContext context) {
+                                return "§aWpisz nową nazwę rangi:";
+                            }
+
+                            @Override
+                            public Prompt acceptInput(ConversationContext context, String input) {
+                                String newRank = input.toLowerCase();
+
+                                if (ranks.isConfigurationSection(newRank)) {
+                                    p.sendMessage("§cTaka ranga już istnieje!");
+                                    return END_OF_CONVERSATION;
+                                }
+
+                                String col = ranks.getString(rank + ".color", "gray");
+
+                                ranks.set(rank, null);
+                                ranks.set(newRank + ".color", col);
+
+                                for (String k : players.getKeys(false)) {
+                                    if (players.getString(k).equals(rank)) {
+                                        players.set(k, newRank);
+                                    }
+                                }
+
+                                saveRanks();
+                                savePlayers();
+
+                                p.sendMessage("§aZmieniono nazwę rangi.");
+                                return END_OF_CONVERSATION;
+                            }
+                        })
+                        .withLocalEcho(false);
+
+                factory.buildConversation(p).begin();
+            }
+
+            case BARRIER -> {
+                p.closeInventory();
+                p.sendMessage(
+                        Component.text("[TAK]").color(NamedTextColor.GREEN)
+                                .clickEvent(ClickEvent.runCommand("/ranga confirmdelete " + rank))
+                );
+                p.sendMessage(
+                        Component.text("[NIE]").color(NamedTextColor.RED)
+                                .clickEvent(ClickEvent.runCommand("/ranga canceldelete"))
+                );
+            }
+        }
     }
+}
+
+/* ================ CHAT ================= */
+
+@EventHandler
+public void onChat(AsyncChatEvent e) {
+    Player p = e.getPlayer();
+
+    String rank = getRank(p);
+
+    Component prefix = Component.text("[" + rank.toUpperCase() + "] ")
+            .color(colorOf(rank));
+
+    Component name = Component.text(p.getName(), NamedTextColor.WHITE);
+    Component msg = e.message();
+
+    e.renderer((source, sourceDisplayName, message, viewer) ->
+            prefix
+                    .append(name)
+                    .append(Component.text(": ", NamedTextColor.GRAY))
+                    .append(msg)
+    );
+}
+
 
     /* ================ COMMANDS ================ */
 
     @Override
-public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
+    public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
 
-    /* ================== /ranga ================== */
-    if (c.getName().equalsIgnoreCase("ranga") && s instanceof Player p) {
+        if (c.getName().equalsIgnoreCase("ranga") && s instanceof Player p) {
 
-        if (a.length == 0) {
-            openMainGUI(p);
-            return true;
-        }
-
-        if (a.length == 2 && a[0].equalsIgnoreCase("edit")) {
-            openEditGUI(p, a[1]);
-            return true;
-        }
-
-        if (a.length == 2 && (a[0].equalsIgnoreCase("delete") || a[0].equalsIgnoreCase("confirmdelete"))) {
-            ranks.set(a[1], null);
-            saveRanks();
-            p.sendMessage("§cUsunięto rangę.");
-            return true;
-        }
-
-        if (a.length == 1 && a[0].equalsIgnoreCase("canceldelete")) {
-            p.sendMessage("§aAnulowano.");
-            return true;
-        }
-    }
-
-    /* ================== /setrank ================== */
-    if (c.getName().equalsIgnoreCase("setrank")) {
-
-        if (!s.isOp()) {
-            s.sendMessage("§cNie masz uprawnień do tej komendy!");
-            return true;
-        }
-
-        if (a.length != 2) {
-            s.sendMessage("§c/setrank <nick> <ranga>");
-            return true;
-        }
-
-        Player t = Bukkit.getPlayer(a[0]);
-        if (t == null) {
-            s.sendMessage("§cGracz offline");
-            return true;
-        }
-
-        String rank = a[1].toLowerCase();
-
-        if (!ranks.isConfigurationSection(rank)) {
-            s.sendMessage("§cTaka ranga nie istnieje!");
-            return true;
-        }
-
-        players.set(t.getUniqueId().toString(), rank);
-        savePlayers();
-
-        updateTab(t);
-        for (Player o : Bukkit.getOnlinePlayers()) {
-            updateTab(o);
-        }
-
-        s.sendMessage("§aUstawiono rangę §e" + rank);
-        return true;
-    }
-
-    /* ================== /fly ================== */
-    if (c.getName().equalsIgnoreCase("fly")) {
-
-        if (!(s instanceof Player p)) {
-            s.sendMessage("§cTa komenda jest tylko dla graczy!");
-            return true;
-        }
-
-        if (!p.isOp()) {
-            p.sendMessage("§cNie masz uprawnień do tej komendy!");
-            return true;
-        }
-
-        boolean newState = !p.getAllowFlight();
-        p.setAllowFlight(newState);
-        p.setFlying(newState);
-
-        p.sendMessage("§aFly: " + (newState ? "§aON" : "§cOFF"));
-        return true;
-    }
-
-    /* ================== /vanish ================== */
-    if (c.getName().equalsIgnoreCase("vanish")) {
-
-        if (!(s instanceof Player p)) {
-            s.sendMessage("§cTa komenda jest tylko dla graczy!");
-            return true;
-        }
-
-        if (!p.isOp()) {
-            p.sendMessage("§cNie masz uprawnień do tej komendy!");
-            return true;
-        }
-
-        if (vanished.contains(p.getUniqueId())) {
-            vanished.remove(p.getUniqueId());
-
-            for (Player o : Bukkit.getOnlinePlayers()) {
-                o.showPlayer(this, p);
+            if (a.length == 0) {
+                openMainGUI(p);
+                return true;
             }
 
-            p.setInvisible(false);
-            updateTab(p);
+            if (a.length == 2 && a[0].equalsIgnoreCase("edit")) {
+                openEditGUI(p, a[1]);
+                return true;
+            }
 
-            p.sendMessage("§aVanish §cOFF");
-        } else {
-            vanished.add(p.getUniqueId());
+            if (a.length == 2 && a[0].equalsIgnoreCase("delete")) {
+                ranks.set(a[1], null);
+                saveRanks();
+                p.sendMessage("§cUsunięto rangę.");
+                return true;
+            }
 
+            if (a.length == 2 && a[0].equalsIgnoreCase("confirmdelete")) {
+                ranks.set(a[1], null);
+                saveRanks();
+                p.sendMessage("§cUsunięto rangę.");
+                return true;
+            }
+
+            if (a.length == 1 && a[0].equalsIgnoreCase("canceldelete")) {
+                p.sendMessage("§aAnulowano.");
+                return true;
+            }
+        }
+
+        if (c.getName().equalsIgnoreCase("setrank") && s.isOp()) {
+
+            if (a.length != 2) {
+                s.sendMessage("§c/setrank <nick> <ranga>");
+                return true;
+            }
+
+            Player t = Bukkit.getPlayer(a[0]);
+            if (t == null) {
+                s.sendMessage("§cGracz offline");
+                return true;
+            }
+
+            String rank = a[1].toLowerCase();
+
+            if (!ranks.isConfigurationSection(rank)) {
+                s.sendMessage("§cTaka ranga nie istnieje!");
+                return true;
+            }
+
+            players.set(t.getUniqueId().toString(), rank);
+            savePlayers();
+
+            updateTab(t);
             for (Player o : Bukkit.getOnlinePlayers()) {
-                if (!o.equals(p)) {
-                    o.hidePlayer(this, p);
+                updateTab(o);
+            }
+
+            s.sendMessage("§aUstawiono rangę §e" + rank);
+            return true;
+        }
+
+        if (c.getName().equalsIgnoreCase("fly") && s instanceof Player p) {
+            p.setAllowFlight(!p.getAllowFlight());
+            p.sendMessage("§aFly: " + (p.getAllowFlight() ? "ON" : "OFF"));
+            return true;
+        }
+
+        if (c.getName().equalsIgnoreCase("vanish") && s instanceof Player p) {
+
+            if (vanished.contains(p.getUniqueId())) {
+                vanished.remove(p.getUniqueId());
+
+                for (Player o : Bukkit.getOnlinePlayers()) {
+                    o.showPlayer(this, p);
                 }
+
+                p.setInvisible(false);
+                updateTab(p);
+
+                p.sendMessage("§aVanish OFF");
+            } else {
+                vanished.add(p.getUniqueId());
+
+                for (Player o : Bukkit.getOnlinePlayers()) {
+                    if (!o.equals(p)) {
+                        o.hidePlayer(this, p);
+                    }
+                }
+
+                p.setInvisible(true);
+                p.playerListName(Component.empty());
+
+                p.sendMessage("§aVanish ON");
             }
-
-            p.setInvisible(true);
-            p.playerListName(Component.empty());
-
-            p.sendMessage("§aVanish §aON");
+            return true;
         }
+
         return true;
     }
-
-    return true;
-}
-
 }
