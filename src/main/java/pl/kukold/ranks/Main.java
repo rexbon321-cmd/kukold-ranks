@@ -363,12 +363,25 @@ public void onChat(AsyncChatEvent e) {
 }
 
 
-    /* ================ COMMANDS ================ */
+            /* ================ COMMANDS ================ */
 
-    @Override
-    public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
+            @Override
+            public boolean onCommand(CommandSender s, Command c, String l, String[] a) {
 
-        if (c.getName().equalsIgnoreCase("ranga") && s instanceof Player p) {
+            if (c.getName().equalsIgnoreCase("ranga")) {
+
+            if (!(s instanceof Player p)) {
+            s.sendMessage("§cTa komenda jest tylko dla administracji!");
+            return true;
+            }
+
+            if (!p.isOp()) {
+            p.sendMessage("§cNie masz uprawnień do tej komendy!");
+            return true;
+            }
+
+            // ---- TWÓJ OBECNY KOD /ranga ----
+
 
             if (a.length == 0) {
                 openMainGUI(p);
